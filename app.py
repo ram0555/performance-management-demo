@@ -1,22 +1,34 @@
-%%writefile app.py
 import os
 import streamlit as st
 import pandas as pd
 from transformers import pipeline
 import spacy
 from datetime import datetime
+import subprocess
+import sys
 
 # Disable GPU and TensorFlow warnings
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 
-# Initialize models (free, lightweight)
+# Install en_core_web_sm if not present
+@st.cache_resource
+def install_spacy_model():
+    try:
+        spacy.load("en_core_web_sm")
+    except OSError:
+        subprocess.check_call([sys.executable, "-m", "spacy", "download", "en_core_web_sm"])
+        import spacy
+        return spacy.load("en_core_web_sm")
+    return spacy.load("en_core_web_sm")
+
+# Initialize models (use distilgpt2 for lighter footprint)
 @st.cache_resource
 def load_models():
     try:
-        generator = pipeline("text-generation", model="gpt2", device=-1)  # Explicitly use CPU
-        nlp = spacy.load("en_core_web_sm")
+        generator = pipeline("text-generation", model="distilgpt2", device=-1)  # Explicitly use CPU
+        nlp = install_spacy_model()
         return generator, nlp
     except Exception as e:
         st.error(f"Error loading models: {str(e)}")
